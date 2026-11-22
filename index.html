@@ -49,7 +49,7 @@ h2.sec{color:var(--mar);text-align:center;font-size:30px;margin:26px 0 16px;font
 .slot.taken b{text-decoration:line-through;opacity:.5}
 .slot.taken span{color:var(--okink);font-weight:600}
 .slot.mine{background:var(--ok);border-color:var(--okink)}
-.note{text-align:center;color:var(--mut);padding:8px;font-size:15px}
+.cx{margin-top:8px;border:0;border-radius:99px;background:#c0392b;color:#fff;font:inherit;font-size:14px;padding:5px 14px;cursor:pointer}.note{text-align:center;color:var(--mut);padding:8px;font-size:15px}
 #status{text-align:center;color:var(--mut);margin:0 0 14px}
 .lobby{display:block;width:100%;max-width:760px;margin:20px auto;border-radius:24px}
 footer{background:var(--mar);color:#fff;text-align:center;padding:30px 16px 40px;margin-top:24px}
@@ -118,7 +118,7 @@ const esc=x=>String(x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 function render(){
   $("#days").innerHTML=DAYS.map(d=>`<section class="day"><h2>${d.t}<small>🕯️ ${d.c}</small></h2><div class="slots">`+
     d.s.map(s=>{const i=id(d,s),t=taken[i];
-      return t?`<button class="slot taken ${myIds.includes(i)?"mine":""}" disabled><b>${s}</b><span>נתפס ע״י ${esc(t.name)}<br>${esc(t.addr||"")}</span></button>`
+      return t?`<div class="slot taken ${myIds.includes(i)?"mine":""}"><b>${s}</b><span>נתפס ע״י ${esc(t.name)}<br>${esc(t.addr||"")}</span>${location.hash==="#admin"?`<button class="cx" data-c="${i}">ביטול שעה</button>`:""}</div>`
               :`<button class="slot" data-i="${i}" data-l="${d.t} · ${s}"><b>${s}</b><span>פנוי – לחצו לתפיסה</span></button>`}).join("")+`</div></section>`).join("");
 }
 async function load(){
@@ -127,7 +127,16 @@ async function load(){
     taken=await r.json();$("#status").textContent="השעות מתעדכנות אוטומטית";render();
   }catch(e){$("#status").textContent="לתיאום שעה התקשרו: 058-4032770"}
 }
-document.addEventListener("click",e=>{
+document.addEventListener("click",async e=>{
+  const c=e.target.closest(".cx");
+  if(c){
+    const code=prompt("קוד ניהול:");if(!code)return;
+    try{const r=await fetch(API+"/cancel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slot:c.dataset.c,code})});
+      if(r.status===403){alert("קוד שגוי");return}
+      if(!r.ok)throw 0;delete taken[c.dataset.c];render();
+    }catch(err){alert("הביטול נכשל, נסו שוב")}
+    return;
+  }
   const b=e.target.closest(".slot[data-i]");if(!b)return;
   pending=b.dataset.i;label=b.dataset.l;$("#dlgInfo").textContent=label;$("#err").textContent="";$("#dlg").showModal();
 });
@@ -146,7 +155,7 @@ $("#ok").onclick=async()=>{
   }catch(err){$("#err").textContent="אירעה שגיאה, נסו שוב או התקשרו 058-4032770"}
   btn.disabled=false;
 };
-render();load();setInterval(load,20000);
+window.addEventListener("hashchange",render);render();load();setInterval(load,20000);
 </script>
 </body>
 </html>
